@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Quality Checker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        .score-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .score-card:hover {
+            transform: translateY(-5px);
+        }
+        .priority-item {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0d6efd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 0 4px 4px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        #loadingSpinner {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">Resume Quality Checker</h1>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Upload Resume Content</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="resumeText" class="form-label">Paste your resume text:</label>
+                            <textarea class="form-control" id="resumeText" rows="15" placeholder="Paste your resume content here..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="jobDescription" class="form-label">Job Description (Optional):</label>
+                            <textarea class="form-control" id="jobDescription" rows="8" placeholder="Add job description to get targeted recommendations..."></textarea>
+                        </div>
+                        <div class="d-grid">
+                            <button id="analyzeBtn" class="btn btn-primary">Analyze Resume</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div id="loadingSpinner" class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Analyzing your resume... This may take a moment.</p>
+                </div>
+                
+                <div id="resultsContainer" class="hidden">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Overall Score</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="display-1 fw-bold mb-3" id="overallScore">--</div>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div id="scoreProgressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="score-card card text-center mb-3">
+                                <div class="card-body">
+                                    <h5>Grammar</h5>
+                                    <div class="display-5 fw-bold" id="grammarScore">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="score-card card text-center mb-3">
+                                <div class="card-body">
+                                    <h5>Content</h5>
+                                    <div class="display-5 fw-bold" id="contentScore">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="score-card card text-center mb-3">
+                                <div class="card-body">
+                                    <h5>Keywords</h5>
+                                    <div class="display-5 fw-bold" id="keywordScore">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>Priority Improvements</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="priorityList"></div>
+                        </div>
+                    </div>
+                    
+                    <ul class="nav nav-tabs" id="resultTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="grammar-tab" data-bs-toggle="tab" data-bs-target="#grammar" type="button" role="tab">Grammar</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="content-tab" data-bs-toggle="tab" data-bs-target="#content" type="button" role="tab">Content</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="keywords-tab" data-bs-toggle="tab" data-bs-target="#keywords" type="button" role="tab">Keywords</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="improved-tab" data-bs-toggle="tab" data-bs-target="#improved" type="button" role="tab">Improved Resume</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content p-3 border border-top-0 rounded-bottom mb-4">
+                        <div class="tab-pane fade show active" id="grammar" role="tabpanel">
+                            <h5>Spelling Errors</h5>
+                            <ul id="spellingList" class="mb-3"></ul>
+                            
+                            <h5>Grammar Issues</h5>
+                            <ul id="grammarList" class="mb-3"></ul>
+                            
+                            <h5>Formatting Issues</h5>
+                            <ul id="formattingList"></ul>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="content" role="tabpanel">
+                            <div id="categoryScores"></div>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="keywords" role="tabpanel">
+                            <div id="keywordResults">
+                                <p>Add a job description for keyword analysis.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="improved" role="tabpanel">
+                            <button id="fixResumeBtn" class="btn btn-success mb-3">Generate Improved Resume</button>
+                            <div id="improvedResumeContent" class="hidden">
+                                <h5>Improved Version</h5>
+                                <pre id="improvedResume" class="p-3 bg-light"></pre>
+                                
+                                <h5>Changes Made</h5>
+                                <ul id="changesList"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const fixResumeBtn = document.getElementById('fixResumeBtn');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            analyzeBtn.addEventListener('click', function() {
+                const resumeText = document.getElementById('resumeText').value;
+                const jobDescription = document.getElementById('jobDescription').value;
+                
+                if (!resumeText.trim()) {
+                    alert('Please paste your resume text');
+                    return;
+                }
+                
+                // Show loading spinner
+                loadingSpinner.style.display = 'block';
+                resultsContainer.classList.add('hidden');
+                
+                // Call the API
+                fetch('/api/comprehensive-score', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        resumeText: resumeText,
+                        jobDescription: jobDescription
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Hide spinner and show results
+                    loadingSpinner.style.display = 'none';
+                    resultsContainer.classList.remove('hidden');
+                    
+                    // Update overall score
+                    const overallScore = document.getElementById('overallScore');
+                    const scoreProgressBar = document.getElementById('scoreProgressBar');
+                    overallScore.textContent = data.finalScore;
+                    scoreProgressBar.style.width = `${data.finalScore}%`;
+                    scoreProgressBar.setAttribute('aria-valuenow', data.finalScore);
+                    scoreProgressBar.textContent = `${data.finalScore}%`;
+                    
+                    // Set color based on score
+                    if (data.finalScore < 50) {
+                        scoreProgressBar.classList.add('bg-danger');
+                    } else if (data.finalScore < 75) {
+                        scoreProgressBar.classList.add('bg-warning');
+                    } else {
+                        scoreProgressBar.classList.add('bg-success');
+                    }
+                    
+                    // Update category scores
+                    document.getElementById('grammarScore').textContent = data.grammarScore;
+                    document.getElementById('contentScore').textContent = data.contentScore;
+                    
+                    if (data.keywordScore) {
+                        document.getElementById('keywordScore').textContent = data.keywordScore;
+                    } else {
+                        document.getElementById('keywordScore').textContent = 'N/A';
+                    }
+                    
+                    // Update priority improvements
+                    const priorityList = document.getElementById('priorityList');
+                    priorityList.innerHTML = '';
+                    data.priorityImprovements.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'priority-item';
+                        div.textContent = item;
+                        priorityList.appendChild(div);
+                    });
+                    
+                    // Update grammar tab
+                    populateGrammarTab(data.grammarCheck);
+                    
+                    // Update content tab
+                    populateContentTab(data.contentAnalysis);
+                    
+                    // Update keyword tab
+                    if (data.keywordAnalysis) {
+                        populateKeywordTab(data.keywordAnalysis);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    loadingSpinner.style.display = 'none';
+                    alert('An error occurred during analysis. Please try again.');
+                });
+            });
+            
+            fixResumeBtn.addEventListener('click', function() {
+                const resumeText = document.getElementById('resumeText').value;
+                const jobDescription = document.getElementById('jobDescription').value;
+                
+                if (!resumeText.trim()) {
+                    alert('Please paste your resume text');
+                    return;
+                }
+                
+                // Show loading within the tab
+                fixResumeBtn.disabled = true;
+                fixResumeBtn.textContent = 'Generating improved resume...';
+                
+                // Call the API
+                fetch('/api/fix-resume', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        resumeText: resumeText,
+                        jobDescription: jobDescription
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    fixResumeBtn.disabled = false;
+                    fixResumeBtn.textContent = 'Generate Improved Resume';
+                    
+                    // Show improved resume section
+                    document.getElementById('improvedResumeContent').classList.remove('hidden');
+                    
+                    // Update improved resume content
+                    document.getElementById('improvedResume').textContent = data.improvedResume;
+                    
+                    // Update changes list
+                    const changesList = document.getElementById('changesList');
+                    changesList.innerHTML = '';
+                    data.changesSummary.forEach(change => {
+                        const li = document.createElement('li');
+                        li.textContent = change;
+                        changesList.appendChild(li);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    fixResumeBtn.disabled = false;
+                    fixResumeBtn.textContent = 'Generate Improved Resume';
+                    alert('An error occurred. Please try again.');
+                });
+            });
+            
+            function populateGrammarTab(grammarData) {
+                // Spelling errors
+                const spellingList = document.getElementById('spellingList');
+                spellingList.innerHTML = '';
+                if (grammarData.spellingErrors && grammarData.spellingErrors.length > 0) {
+                    grammarData.spellingErrors.forEach(error => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<strong>${error.word}</strong> → <span class="text-success">${error.correction}</span>`;
+                        spellingList.appendChild(li);
+                    });
+                } else {
+                    spellingList.innerHTML = '<li>No spelling errors found.</li>';
+                }
+                
+                // Grammar issues
+                const grammarList = document.getElementById('grammarList');
+                grammarList.innerHTML = '';
+                if (grammarData.grammarIssues && grammarData.grammarIssues.length > 0) {
+                    grammarData.grammarIssues.forEach(issue => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<strong>${issue.issue}</strong> → <span class="text-success">${issue.suggestion}</span>`;
+                        grammarList.appendChild(li);
+                    });
+                } else {
+                    grammarList.innerHTML = '<li>No grammar issues found.</li>';
+                }
+                
+                // Formatting issues
+                const formattingList = document.getElementById('formattingList');
+                formattingList.innerHTML = '';
+                if (grammarData.formattingIssues && grammarData.formattingIssues.length > 0) {
+                    grammarData.formattingIssues.forEach(issue => {
+                        const li = document.createElement('li');
+                        li.textContent = issue;
+                        formattingList.appendChild(li);
+                    });
+                } else {
+                    formattingList.innerHTML = '<li>No formatting issues found.</li>';
+                }
+            }
+            
+            function populateContentTab(contentData) {
+                const categoryScores = document.getElementById('categoryScores');
+                categoryScores.innerHTML = '';
+                
+                // Create a card for each category
+                for (const category in contentData.categoryScores) {
+                    const score = contentData.categoryScores[category];
+                    const strengths = contentData.strengths[category] || [];
+                    const improvements = contentData.improvements[category] || [];
+                    
+                    const card = document.createElement('div');
+                    card.className = 'card mb-3';
+                    
+                    const cardHeader = document.createElement('div');
+                    cardHeader.className = 'card-header';
+                    cardHeader.innerHTML = `<h5>${formatCategoryName(category)} <span class="float-end badge ${getScoreBadgeClass(score)}">${score}/10</span></h5>`;
+                    
+                    const cardBody = document.createElement('div');
+                    cardBody.className = 'card-body';
+                    
+                    // Strengths section
+                    const strengthsTitle = document.createElement('h6');
+                    strengthsTitle.className = 'card-subtitle mb-2 text-success';
+                    strengthsTitle.textContent = 'Strengths:';
+                    cardBody.appendChild(strengthsTitle);
+                    
+                    const strengthsList = document.createElement('ul');
+                    strengths.forEach(strength => {
+                        const li = document.createElement('li');
+                        li.textContent = strength;
+                        strengthsList.appendChild(li);
+                    });
+                    cardBody.appendChild(strengthsList);
+                    
+                    // Improvements section
+                    const improvementsTitle = document.createElement('h6');
+                    improvementsTitle.className = 'card-subtitle mb-2 text-danger';
+                    improvementsTitle.textContent = 'Areas to Improve:';
+                    cardBody.appendChild(improvementsTitle);
+                    
+                    const improvementsList = document.createElement('ul');
+                    improvements.forEach(improvement => {
+                        const li = document.createElement('li');
+                        li.textContent = improvement;
+                        improvementsList.appendChild(li);
+                    });
+                    cardBody.appendChild(improvementsList);
+                    
+                    // Assemble the card
+                    card.appendChild(cardHeader);
+                    card.appendChild(cardBody);
+                    categoryScores.appendChild(card);
+                }
+            }
+            
+            function populateKeywordTab(keywordData) {
+                const keywordResults = document.getElementById('keywordResults');
+                keywordResults.innerHTML = '';
+                
+                // Create relevance score display
+                const scoreDiv = document.createElement('div');
+                scoreDiv.className = 'mb-4 text-center';
+                scoreDiv.innerHTML = `
+                    <h4>Keyword Relevance Score</h4>
+                    <div class="display-4 fw-bold ${getScoreColorClass(keywordData.relevanceScore)}">${keywordData.relevanceScore}/10</div>
+                `;
+                keywordResults.appendChild(scoreDiv);
+                
+                // Create two-column layout
+                const row = document.createElement('div');
+                row.className = 'row';
+                
+                // Matched keywords column
+                const matchedCol = document.createElement('div');
+                matchedCol.className = 'col-md-6';
+                
+                const matchedCard = document.createElement('div');
+                matchedCard.className = 'card h-100';
+                matchedCard.innerHTML = `
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Matched Keywords</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul id="matchedKeywordsList"></ul>
+                    </div>
+                `;
+                matchedCol.appendChild(matchedCard);
+                
+                // Missing keywords column
+                const missingCol = document.createElement('div');
+                missingCol.className = 'col-md-6';
+                
+                const missingCard = document.createElement('div');
+                missingCard.className = 'card h-100';
+                missingCard.innerHTML = `
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">Missing Keywords</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul id="missingKeywordsList"></ul>
+                    </div>
+                `;
+                missingCol.appendChild(missingCard);
+                
+                row.appendChild(matchedCol);
+                row.appendChild(missingCol);
+                keywordResults.appendChild(row);
+                
+                // Populate matched keywords
+                const matchedList = document.getElementById('matchedKeywordsList');
+                if (keywordData.matchedKeywords && keywordData.matchedKeywords.length > 0) {
+                    keywordData.matchedKeywords.forEach(keyword => {
+                        const li = document.createElement('li');
+                        li.textContent = keyword;
+                        matchedList.appendChild(li);
+                    });
+                } else {
+                    matchedList.innerHTML = '<li>No keywords matched.</li>';
+                }
+                
+                // Populate missing keywords
+                const missingList = document.getElementById('missingKeywordsList');
+                if (keywordData.missingKeywords && keywordData.missingKeywords.length > 0) {
+                    keywordData.missingKeywords.forEach(keyword => {
+                        const li = document.createElement('li');
+                        li.textContent = keyword;
+                        missingList.appendChild(li);
+                    });
+                } else {
+                    missingList.innerHTML = '<li>No important keywords missing.</li>';
+                }
+                
+                // Recommendations section
+                const recommendationsSection = document.createElement('div');
+                recommendationsSection.className = 'mt-4';
+                recommendationsSection.innerHTML = `
+                    <h4>Recommended Additions</h4>
+                    <div class="alert alert-info">
+                        <ul id="recommendedList"></ul>
+                    </div>
+                `;
+                keywordResults.appendChild(recommendationsSection);
+                
+                // Populate recommendations
+                const recommendedList = document.getElementById('recommendedList');
+                if (keywordData.recommendedAdditions && keywordData.recommendedAdditions.length > 0) {
+                    keywordData.recommendedAdditions.forEach(recommendation => {
+                        const li = document.createElement('li');
+                        li.textContent = recommendation;
+                        recommendedList.appendChild(li);
+                    });
+                } else {
+                    recommendedList.innerHTML = '<li>No specific recommendations.</li>';
+                }
+            }
+            
+            // Helper functions
+            function formatCategoryName(name) {
+                return name.split(/(?=[A-Z])/).join(' ');
+            }
+            
+            function getScoreBadgeClass(score) {
+                if (score >= 8) return 'bg-success';
+                if (score >= 6) return 'bg-warning';
+                return 'bg-danger';
+            }
+            
+            function getScoreColorClass(score) {
+                if (score >= 8) return 'text-success';
+                if (score >= 6) return 'text-warning';
+                return 'text-danger';
+            }
+        });
+    </script>
+</body>
+</html>

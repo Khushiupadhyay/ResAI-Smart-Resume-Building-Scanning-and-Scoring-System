@@ -1,0 +1,6 @@
+# Add Homebrew Python to PATH
+export PATH="/opt/homebrew/bin:$PATH"
+export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"

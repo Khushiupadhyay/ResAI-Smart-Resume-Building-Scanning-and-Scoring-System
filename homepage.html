@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homepage</title>
+    <style>
+        body {
+            padding: 30px;
+            background-color: #007bff;
+            
+            background-size: cover;
+            position: relative;
+        }
+        /* Overlay effect for better readability */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            z-index: -1;
+        }
+        h1 {
+            text-align: center;
+            font-size: 80px;
+            color: white;
+            text-shadow: 2px 2px 5px black;
+        }
+        p {
+            text-align: center;
+            font-size: 22px;
+            color: white;
+            text-shadow: 1px 1px 3px black;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        button {
+            color: white;
+            background-color: #83bfff;
+            padding: 15px 170px;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            align-items: center;
+            align-self: center;
+            align-content: center;
+            text-align: center;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.3);
+            padding-bottom: 180px;
+        }
+        button:hover {
+            background-color: #007bff;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>ResAI</h1>
+    <p>Your one-stop solution for building and analyzing resumes.</p>
+    <div class="button-container">
+        <button onclick="window.location.href='/resume_builder'">Resume Building</button>
+        <button onclick="window.location.href='/scan'">Resume Scanning</button>
+        <button onclick="window.location.href='/score'">Resume Scoring</button>
+    </div>
+    <br>
+    <br>
+    <br>
+    <p>ResAI – Your ultimate solution for creating and optimizing resumes. Whether you're crafting a new resume from scratch, scanning your existing one for improvements, or scoring it to assess its effectiveness, ResAI provides powerful tools to enhance your job application. Stand out from the competition with AI-driven insights and build a resume that truly represents your skills and potential. Get started today and take your career to the next level!</p>
+</body>
+</html>

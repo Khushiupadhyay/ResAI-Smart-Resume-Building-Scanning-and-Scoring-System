@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Builder Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            min-height: 100vh;
+        }
+        .chat-container {
+            flex: 1;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            background-color: #007bff;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+        }
+        .credits-display {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 200px);
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            max-width: 80%;
+        }
+        .bot-message {
+            background-color: #f1f1f1;
+            align-self: flex-start;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+        #message-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+            outline: none;
+        }
+        #send-button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+        #generate-button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+            display: none;
+        }
+        #generate-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .typing-indicator {
+            display: none;
+            margin-bottom: 15px;
+        }
+        .typing-indicator span {
+            height: 10px;
+            width: 10px;
+            float: left;
+            margin: 0 1px;
+            background-color: #9E9EA1;
+            display: block;
+            border-radius: 50%;
+            opacity: 0.4;
+        }
+        .typing-indicator span:nth-of-type(1) {
+            animation: 1s blink infinite 0.3333s;
+        }
+        .typing-indicator span:nth-of-type(2) {
+            animation: 1s blink infinite 0.6666s;
+        }
+        .typing-indicator span:nth-of-type(3) {
+            animation: 1s blink infinite 0.9999s;
+        }
+        @keyframes blink {
+            50% {
+                opacity: 1;
+            }
+        }
+        .info-panel {
+            background-color: #e6f7ff;
+            border-left: 4px solid #1890ff;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        .no-credits-message {
+            color: #dc3545;
+            font-weight: bold;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chat-container">
+            <div class="chat-header">
+                <h1>Resume Builder Chatbot</h1>
+                <div class="credits-display" id="credits-display">Credits: 3</div>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="info-panel">
+                    This resume builder uses Gemini AI to enhance your content when possible. You have 3 resume credits - each PDF generation uses 1 credit.
+                </div>
+                <div class="typing-indicator" id="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <div class="no-credits-message" id="no-credits-message">
+                    You have no credits remaining. Please contact support to get more credits.
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="message-input" placeholder="Type your message here...">
+                <button id="send-button">Send</button>
+                <button id="generate-button">Generate Resume</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sessionId = null;
+        let currentState = 'greeting';
+        let creditsRemaining = 3;
+
+        // Function to update the credits display
+        function updateCreditsDisplay() {
+            document.getElementById('credits-display').textContent = `Credits: ${creditsRemaining}`;
+            
+            const generateButton = document.getElementById('generate-button');
+            if (creditsRemaining <= 0) {
+                generateButton.disabled = true;
+                document.getElementById('no-credits-message').style.display = 'block';
+            } else {
+                generateButton.disabled = false;
+                document.getElementById('no-credits-message').style.display = 'none';
+            }
+        }
+
+        // Function to add a message to the chat
+        function addMessage(message, isUser) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.classList.add(isUser ? 'user-message' : 'bot-message');
+            messageElement.textContent = message;
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Function to show typing indicator
+        function showTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            indicator.style.display = 'block';
+            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+        }
+
+        // Function to hide typing indicator
+        function hideTypingIndicator() {
+            document.getElementById('typing-indicator').style.display = 'none';
+        }
+
+        // Function to get credits from server
+        async function getCredits() {
+            try {
+                const response = await fetch('/api/get-credits', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId
+                    }),
+                });
+                
+                const data = await response.json();
+                creditsRemaining = data.credits;
+                updateCreditsDisplay();
+            } catch (error) {
+                console.error('Error getting credits:', error);
+            }
+        }
+
+        // Function to send a message to the server
+        async function sendMessage(message) {
+            try {
+                showTypingIndicator();
+                
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: sessionId
+                    }),
+                });
+                
+                const data = await response.json();
+                hideTypingIndicator();
+                
+                sessionId = data.session_id;
+                currentState = data.state;
+                creditsRemaining = data.credits;
+                
+                updateCreditsDisplay();
+                addMessage(data.response, false);
+                
+                // Show the generate button if state is complete
+                if (currentState === 'complete') {
+                    document.getElementById('generate-button').style.display = 'block';
+                }
+            } catch (error) {
+                hideTypingIndicator();
+                console.error('Error:', error);
+                addMessage('Sorry, there was an error processing your request.', false);
+            }
+        }
+
+        // Function to generate resume
+        async function generateResume() {
+            if (creditsRemaining <= 0) {
+                addMessage('You have no credits remaining to generate a resume.', false);
+                return;
+            }
+            
+            try {
+                addMessage("Generating your resume with enhanced content... This may take a moment.", false);
+                
+                const response = await fetch('/api/generate-resume', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId
+                    }),
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        addMessage('You have no credits remaining to generate a resume.', false);
+                        return;
+                    } else if (response.status === 404) {
+                        addMessage('Session expired. Please refresh the page to start a new session.', false);
+                        return;
+                    }
+                    throw new Error('Error generating resume');
+                }
+                
+                // Get remaining credits from header
+                creditsRemaining = parseInt(response.headers.get('X-Credits-Remaining') || '0');
+                updateCreditsDisplay();
+                
+                // Create a blob from the PDF stream
+                const blob = await response.blob();
+                
+                // Create a link to download the PDF
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'resume.pdf';
+                document.body.appendChild(a);
+                a.click();
+                
+                // Clean up
+                window.URL.revokeObjectURL(url);
+                a.remove();
+                
+                // Check if the server reset the conversation state
+                if (response.headers.get('X-Next-State')) {
+                    currentState = response.headers.get('X-Next-State');
+                    
+                    // Reset the UI for a new resume if needed
+                    if (currentState === 'personal_info') {
+                        document.getElementById('generate-button').style.display = 'none';
+                    }
+                }
+                
+                if (creditsRemaining > 0) {
+                    addMessage(`Your resume has been generated and downloaded! You have ${creditsRemaining} credit(s) remaining. Would you like to create another resume? Let's start with your personal information.`, false);
+                } else {
+                    addMessage('Your resume has been generated and downloaded! You have used all your credits.', false);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('Sorry, there was an error generating your resume.', false);
+            }
+        }
+
+        // Initialize the chat
+        window.onload = function() {
+            // Set up event listeners
+            document.getElementById('send-button').addEventListener('click', function() {
+                const input = document.getElementById('message-input');
+                const message = input.value.trim();
+                
+                if (message) {
+                    addMessage(message, true);
+                    input.value = '';
+                    sendMessage(message);
+                }
+            });
+            
+            document.getElementById('message-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const message = this.value.trim();
+                    
+                    if (message) {
+                        addMessage(message, true);
+                        this.value = '';
+                        sendMessage(message);
+                    }
+                }
+            });
+            
+            document.getElementById('generate-button').addEventListener('click', generateResume);
+            
+            // Start the conversation
+            sendMessage('');
+        };
+    </script>
+</body>
+</html>
